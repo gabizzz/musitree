@@ -1,0 +1,833 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Genealogía Musical</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darker: '#0a0b0e',
+                        darkcard: '#12141c',
+                        darkborder: '#1f2430',
+                        accent: '#6366f1',
+                        accenthover: '#4f46e5',
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Vis-network CDN -->
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #12141c; }
+        ::-webkit-scrollbar-thumb { background: #272a37; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #374151; }
+    </style>
+</head>
+<body class="bg-darker text-gray-100 h-screen flex flex-col overflow-hidden">
+
+    <!-- Top Navigation Bar -->
+    <header class="bg-darkcard border-b border-darkborder px-6 py-3 flex items-center justify-between shrink-0 z-20">
+        <div class="flex items-center space-x-3">
+            <div class="bg-indigo-600 p-2 rounded-lg text-white shadow-lg shadow-indigo-500/20">
+                <i class="fa-solid fa-guitar text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg tracking-wide text-white flex items-center gap-2">
+                    Genealogía Musical <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 font-medium">SPA Local</span>
+                </h1>
+                <p class="text-xs text-gray-400">Red interactiva de músicos, bandas y proyectos</p>
+            </div>
+        </div>
+
+        <div class="flex items-center space-x-4">
+            <!-- Simulated Active User Switcher -->
+            <div class="hidden md:flex items-center space-x-2 bg-darker px-3 py-1.5 rounded-lg border border-darkborder text-xs">
+                <span class="text-gray-400"><i class="fa-solid fa-user-gear mr-1.5"></i>Usuario Actual:</span>
+                <select id="currentUserSelect" onchange="switchUser(this.value)" class="bg-transparent text-indigo-400 font-semibold focus:outline-none cursor-pointer">
+                    <!-- Populated dynamically -->
+                </select>
+            </div>
+
+            <!-- Notifications / Invites Badge Button -->
+            <button onclick="openModal('invitesModal')" class="relative p-2 rounded-lg bg-darker border border-darkborder hover:border-indigo-500 transition-colors text-gray-300 hover:text-white" title="Invitaciones pendientes">
+                <i class="fa-solid fa-bell"></i>
+                <span id="invitesBadge" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center hidden">0</span>
+            </button>
+
+            <!-- Reset Demo Data -->
+            <button onclick="resetData()" class="px-3 py-1.5 bg-darker border border-darkborder hover:border-gray-600 rounded-lg text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-1.5">
+                <i class="fa-solid fa-rotate-right"></i>
+                <span class="hidden sm:inline">Restaurar Demo</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Layout -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+        
+        <!-- Left Sidebar: Management Panels -->
+        <aside class="w-full lg:w-96 bg-darkcard border-r border-darkborder flex flex-col shrink-0 z-10 shadow-2xl">
+            <!-- Navigation Tabs -->
+            <div class="flex border-b border-darkborder bg-darker/50">
+                <button onclick="switchTab('graphPanel')" id="tabBtnGraphPanel" class="flex-1 py-3 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500 bg-darkcard transition-colors flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-circle-nodes"></i> Panel & Acciones
+                </button>
+                <button onclick="switchTab('directoryPanel')" id="tabBtnDirectoryPanel" class="flex-1 py-3 text-xs font-semibold text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition-colors flex items-center justify-center gap-1.5">
+                    <i class="fa-solid fa-list"></i> Directorio
+                </button>
+            </div>
+
+            <!-- Tab Content 1: Forms & Actions -->
+            <div id="graphPanel" class="flex-1 overflow-y-auto p-4 space-y-6">
+                
+                <!-- Quick Stats -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div class="bg-darker p-3 rounded-xl border border-darkborder text-center">
+                        <div class="text-2xl font-bold text-indigo-400" id="statMusicians">0</div>
+                        <div class="text-[11px] text-gray-400 uppercase tracking-wider mt-0.5">Músicos</div>
+                    </div>
+                    <div class="bg-darker p-3 rounded-xl border border-darkborder text-center">
+                        <div class="text-2xl font-bold text-emerald-400" id="statBands">0</div>
+                        <div class="text-[11px] text-gray-400 uppercase tracking-wider mt-0.5">Bandas</div>
+                    </div>
+                </div>
+
+                <!-- Section: Create Musician -->
+                <div class="bg-darker p-4 rounded-xl border border-darkborder">
+                    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-user-plus text-indigo-400"></i> Registrar Músico
+                    </h3>
+                    <form onsubmit="handleCreateMusician(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 mb-1">Nombre y Apellido / Apodo</label>
+                            <input type="text" id="musicianName" required placeholder="Ej: Charly García" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                        </div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Instrumento principal</label>
+                                <input type="text" id="musicianInstrument" required placeholder="Ej: Teclados / Voz" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Ubicación</label>
+                                <input type="text" id="musicianLocation" required placeholder="Ej: Buenos Aires" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-indigo-500">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-lg shadow-indigo-600/20">
+                            Crear Músico
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Section: Create Band -->
+                <div class="bg-darker p-4 rounded-xl border border-darkborder">
+                    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-compact-disc text-emerald-400"></i> Registrar Banda / Proyecto
+                    </h3>
+                    <form onsubmit="handleCreateBand(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 mb-1">Nombre de la Banda</label>
+                            <input type="text" id="bandName" required placeholder="Ej: Serú Girán" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Género</label>
+                                <input type="text" id="bandGenre" required placeholder="Rock" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Año Inicio</label>
+                                <input type="number" id="bandStart" required placeholder="1978" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Año Fin (opc)</label>
+                                <input type="number" id="bandEnd" placeholder="1982" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-emerald-500">
+                            </div>
+                        </div>
+                        <button type="submit" class="w-full py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-lg shadow-emerald-600/20">
+                            Crear Banda
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Section: Link Musician to Band -->
+                <div class="bg-darker p-4 rounded-xl border border-darkborder">
+                    <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+                        <i class="fa-solid fa-link text-amber-400"></i> Vincular Músico a Banda
+                    </h3>
+                    <form onsubmit="handleLinkRelation(event)" class="space-y-3">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 mb-1">Músico</label>
+                            <select id="linkMusicianId" required class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] text-gray-400 mb-1">Banda / Proyecto</label>
+                            <select id="linkBandId" required class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Rol</label>
+                                <input type="text" id="linkRole" required placeholder="Guitarra" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Desde</label>
+                                <input type="number" id="linkStartYear" required placeholder="1978" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                            </div>
+                            <div>
+                                <label class="block text-[11px] text-gray-400 mb-1">Hasta</label>
+                                <input type="number" id="linkEndYear" placeholder="Actual" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                            </div>
+                        </div>
+                        <p class="text-[10px] text-gray-400 italic">Nota: Al vincular, requerirá validación/aceptación por invitación para integrarse al grafo.</p>
+                        <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-lg shadow-amber-600/20">
+                            Enviar Solicitud de Vínculo
+                        </button>
+                    </form>
+                </div>
+
+            </div>
+
+            <!-- Tab Content 2: Directory Listing -->
+            <div id="directoryPanel" class="flex-1 overflow-y-auto p-4 space-y-4 hidden">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Músicos Registrados</h3>
+                </div>
+                <div id="directoryMusiciansList" class="space-y-2">
+                    <!-- Dynamic -->
+                </div>
+
+                <div class="flex items-center justify-between pt-4 border-t border-darkborder">
+                    <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Bandas Registradas</h3>
+                </div>
+                <div id="directoryBandsList" class="space-y-2">
+                    <!-- Dynamic -->
+                </div>
+            </div>
+        </aside>
+
+        <!-- Center: Interactive Graph View -->
+        <main class="flex-1 flex flex-col relative bg-darker overflow-hidden">
+            <!-- Graph Control Toolbar overlay -->
+            <div class="absolute top-4 left-4 z-10 flex flex-wrap items-center gap-2 bg-darkcard/90 backdrop-blur-md p-2 rounded-xl border border-darkborder shadow-xl">
+                <button onclick="fitGraph()" class="px-3 py-1.5 bg-darker hover:bg-darkborder rounded-lg text-xs text-gray-300 hover:text-white transition-colors flex items-center gap-1.5 border border-darkborder">
+                    <i class="fa-solid fa-expand"></i> Centrar Grafo
+                </button>
+                <div class="h-4 w-[1px] bg-darkborder"></div>
+                <div class="flex items-center space-x-3 text-xs px-2 text-gray-400">
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-emerald-500 inline-block shadow-sm shadow-emerald-500/50"></span> Banda</span>
+                    <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-full bg-indigo-500 inline-block shadow-sm shadow-indigo-500/50"></span> Músico</span>
+                </div>
+            </div>
+
+            <!-- Vis-network Container -->
+            <div id="networkCanvas" class="w-full flex-1 cursor-grab active:cursor-grabbing"></div>
+
+            <!-- Bottom Info Card / Legend / Selected Node Details -->
+            <div id="nodeDetailsCard" class="absolute bottom-4 left-4 right-4 lg:right-auto lg:max-w-md bg-darkcard/95 backdrop-blur-md border border-darkborder p-4 rounded-xl shadow-2xl hidden z-10">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <span id="detailNodeType" class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30">Tipo</span>
+                        <h3 id="detailTitle" class="text-base font-bold text-white mt-1">Nombre del elemento</h3>
+                    </div>
+                    <button onclick="closeDetails()" class="text-gray-400 hover:text-white p-1"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="detailBody" class="mt-3 text-xs space-y-1.5 text-gray-300">
+                    <!-- Dynamic details content -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Modal for Pending Invitations / Validations -->
+    <div id="invitesModal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-darkcard border border-darkborder rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+            <div class="p-4 border-b border-darkborder flex items-center justify-between bg-darker/50">
+                <h3 class="font-semibold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-envelope-open-text text-indigo-400"></i> Bandeja de Solicitudes e Invitaciones
+                </h3>
+                <button onclick="closeModal('invitesModal')" class="text-gray-400 hover:text-white p-1.5 rounded-lg hover:bg-darkborder"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="p-4 overflow-y-auto space-y-3 flex-1" id="invitesModalList">
+                <!-- Dynamic pending list -->
+            </div>
+            <div class="p-3 bg-darker border-t border-darkborder text-right">
+                <button onclick="closeModal('invitesModal')" class="px-4 py-2 bg-darkcard hover:bg-darkborder text-white text-xs font-semibold rounded-lg border border-darkborder">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert / Message Notification Box (Custom modal replacing alert) -->
+    <div id="msgModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-darkcard border border-darkborder rounded-2xl w-full max-w-sm p-5 text-center shadow-2xl space-y-4">
+            <div id="msgIcon" class="w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-xl border border-indigo-500/30">
+                <i class="fa-solid fa-circle-info"></i>
+            </div>
+            <h3 id="msgTitle" class="font-bold text-white text-base">Aviso</h3>
+            <p id="msgText" class="text-xs text-gray-300 leading-relaxed">Mensaje del sistema.</p>
+            <button onclick="closeMsgModal()" class="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-semibold transition-colors">Entendido</button>
+        </div>
+    </div>
+
+    <!-- Application Core Script -->
+    <script>
+        // --- INITIAL DEFAULT DATA ---
+        const defaultData = {
+            musicians: [
+                { id: 'm1', name: 'Charly García', instrument: 'Teclados / Voz', location: 'Buenos Aires' },
+                { id: 'm2', name: 'David Lebón', instrument: 'Guitarra / Voz', location: 'Buenos Aires' },
+                { id: 'm3', name: 'Pedro Aznar', instrument: 'Bajo / Teclados', location: 'Buenos Aires' },
+                { id: 'm4', name: 'Oscar Moro', instrument: 'Batería', location: 'Rosario' },
+                { id: 'm5', name: 'Luis Alberto Spinetta', instrument: 'Guitarra / Voz', location: 'Buenos Aires' }
+            ],
+            bands: [
+                { id: 'b1', name: 'Serú Girán', genre: 'Rock Sinfónico / Pop', startYear: 1978, endYear: 1982 },
+                { id: 'b2', name: 'Pappo\'s Blues', genre: 'Blues Rock', startYear: 1970, endYear: 1978 },
+                { id: 'b3', name: 'Invisible', genre: 'Rock Progresivo', startYear: 1973, endYear: 1976 }
+            ],
+            relations: [
+                { id: 'r1', musicianId: 'm1', bandId: 'b1', role: 'Teclados y Voz', startYear: 1978, endYear: 1982, status: 'validated' },
+                { id: 'r2', musicianId: 'm2', bandId: 'b1', role: 'Guitarra y Voz', startYear: 1978, endYear: 1982, status: 'validated' },
+                { id: 'r3', musicianId: 'm3', bandId: 'b1', role: 'Bajo y Coros', startYear: 1978, endYear: 1982, status: 'validated' },
+                { id: 'r4', musicianId: 'm4', bandId: 'b1', role: 'Batería', startYear: 1978, endYear: 1982, status: 'validated' },
+                { id: 'r5', musicianId: 'm1', bandId: 'b3', role: 'Invitado / Colaborador', startYear: 1974, endYear: 1974, status: 'pending' },
+                { id: 'r6', musicianId: 'm5', bandId: 'b3', role: 'Guitarra y Voz Principal', startYear: 1973, endYear: 1976, status: 'validated' }
+            ]
+        };
+
+        let appState = {
+            currentUserId: 'm1', // Default active simulated user
+            musicians: [],
+            bands: [],
+            relations: []
+        };
+
+        let network = null;
+        let dataContainer = null;
+
+        // --- LOCAL STORAGE & INIT ---
+        function loadStorage() {
+            const saved = localStorage.getItem('genealogia_musical_data');
+            if (saved) {
+                try {
+                    appState = JSON.parse(saved);
+                } catch (e) {
+                    appState = JSON.parse(JSON.stringify(defaultData));
+                }
+            } else {
+                appState = JSON.parse(JSON.stringify(defaultData));
+                saveStorage();
+            }
+        }
+
+        function saveStorage() {
+            localStorage.setItem('genealogia_musical_data', JSON.stringify(appState));
+        }
+
+        function resetData() {
+            appState = JSON.parse(JSON.stringify(defaultData));
+            saveStorage();
+            initApp();
+            showCustomModal("Restaurado", "Se han cargado los datos de ejemplo exitosamente.");
+        }
+
+        // --- UI HELPERS ---
+        function showCustomModal(title, text, isError = false) {
+            document.getElementById('msgTitle').innerText = title;
+            document.getElementById('msgText').innerText = text;
+            const icon = document.getElementById('msgIcon');
+            if (isError) {
+                icon.className = "w-12 h-12 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto text-xl border border-rose-500/30";
+                icon.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i>';
+            } else {
+                icon.className = "w-12 h-12 rounded-full bg-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto text-xl border border-indigo-500/30";
+                icon.innerHTML = '<i class="fa-solid fa-circle-info"></i>';
+            }
+            document.getElementById('msgModal').classList.remove('hidden');
+        }
+
+        function closeMsgModal() {
+            document.getElementById('msgModal').classList.add('hidden');
+        }
+
+        function openModal(id) {
+            document.getElementById(id).classList.remove('hidden');
+            if (id === 'invitesModal') renderInvitesModal();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).classList.add('hidden');
+        }
+
+        function switchTab(tabId) {
+            const isGraph = tabId === 'graphPanel';
+            document.getElementById('graphPanel').classList.toggle('hidden', !isGraph);
+            document.getElementById('directoryPanel').classList.toggle('hidden', isGraph);
+
+            document.getElementById('tabBtnGraphPanel').className = isGraph 
+                ? "flex-1 py-3 text-xs font-semibold text-indigo-400 border-b-2 border-indigo-500 bg-darkcard transition-colors flex items-center justify-center gap-1.5"
+                : "flex-1 py-3 text-xs font-semibold text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition-colors flex items-center justify-center gap-1.5";
+
+            document.getElementById('tabBtnDirectoryPanel').className = !isGraph 
+                ? "flex-1 py-3 text-xs font-semibold text-emerald-400 border-b-2 border-emerald-500 bg-darkcard transition-colors flex items-center justify-center gap-1.5"
+                : "flex-1 py-3 text-xs font-semibold text-gray-400 hover:text-gray-200 border-b-2 border-transparent transition-colors flex items-center justify-center gap-1.5";
+        }
+
+        // --- CORE APPLICATION INITIALIZATION ---
+        function initApp() {
+            loadStorage();
+            renderCurrentUserSelect();
+            renderSelectOptions();
+            renderStats();
+            renderDirectory();
+            updateInvitesBadge();
+            buildGraph();
+        }
+
+        function switchUser(userId) {
+            appState.currentUserId = userId;
+            updateInvitesBadge();
+            renderInvitesModal();
+        }
+
+        function renderCurrentUserSelect() {
+            const select = document.getElementById('currentUserSelect');
+            select.innerHTML = '';
+            appState.musicians.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.name;
+                if (m.id === appState.currentUserId) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderSelectOptions() {
+            const musSelect = document.getElementById('linkMusicianId');
+            musSelect.innerHTML = '';
+            appState.musicians.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.name} (${m.instrument})`;
+                musSelect.appendChild(opt);
+            });
+
+            const bandSelect = document.getElementById('linkBandId');
+            bandSelect.innerHTML = '';
+            appState.bands.forEach(b => {
+                const opt = document.createElement('option');
+                opt.value = b.id;
+                opt.textContent = `${b.name} (${b.startYear}-${b.endYear || 'Presente'})`;
+                bandSelect.appendChild(opt);
+            });
+        }
+
+        function renderStats() {
+            document.getElementById('statMusicians').innerText = appState.musicians.length;
+            document.getElementById('statBands').innerText = appState.bands.length;
+        }
+
+        function renderDirectory() {
+            const musList = document.getElementById('directoryMusiciansList');
+            musList.innerHTML = '';
+            appState.musicians.forEach(m => {
+                const div = document.createElement('div');
+                div.className = "bg-darkcard p-2.5 rounded-lg border border-darkborder flex items-center justify-between text-xs";
+                div.innerHTML = `
+                    <div>
+                        <div class="font-semibold text-white">${m.name}</div>
+                        <div class="text-[11px] text-indigo-400">${m.instrument} • <span class="text-gray-400">${m.location}</span></div>
+                    </div>
+                    <button onclick="deleteMusician('${m.id}')" class="text-gray-500 hover:text-rose-400 p-1" title="Eliminar músico"><i class="fa-solid fa-trash-can"></i></button>
+                `;
+                musList.appendChild(div);
+            });
+
+            const bandList = document.getElementById('directoryBandsList');
+            bandList.innerHTML = '';
+            appState.bands.forEach(b => {
+                const div = document.createElement('div');
+                div.className = "bg-darkcard p-2.5 rounded-lg border border-darkborder flex items-center justify-between text-xs";
+                div.innerHTML = `
+                    <div>
+                        <div class="font-semibold text-white">${b.name}</div>
+                        <div class="text-[11px] text-emerald-400">${b.genre} • <span class="text-gray-400">${b.startYear}-${b.endYear || 'Act.'}</span></div>
+                    </div>
+                    <button onclick="deleteBand('${b.id}')" class="text-gray-500 hover:text-rose-400 p-1" title="Eliminar banda"><i class="fa-solid fa-trash-can"></i></button>
+                `;
+                bandList.appendChild(div);
+            });
+        }
+
+        function updateInvitesBadge() {
+            // Pending invites targeted at current user OR any pending that user can validate
+            const pendingCount = appState.relations.filter(r => r.status === 'pending').length;
+            const badge = document.getElementById('invitesBadge');
+            if (pendingCount > 0) {
+                badge.innerText = pendingCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        function renderInvitesModal() {
+            const list = document.getElementById('invitesModalList');
+            list.innerHTML = '';
+            const pending = appState.relations.filter(r => r.status === 'pending');
+
+            if (pending.length === 0) {
+                list.innerHTML = `
+                    <div class="text-center py-8 text-gray-400 text-xs">
+                        <i class="fa-regular fa-face-smile text-2xl mb-2 text-indigo-400"></i>
+                        <p>No hay solicitudes pendientes en este momento.</p>
+                    </div>
+                `;
+                return;
+            }
+
+            pending.forEach(r => {
+                const mus = appState.musicians.find(m => m.id === r.musicianId);
+                const band = appState.bands.find(b => b.id === r.bandId);
+                if (!mus || !band) return;
+
+                const card = document.createElement('div');
+                card.className = "bg-darker p-3.5 rounded-xl border border-darkborder flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs";
+                card.innerHTML = `
+                    <div>
+                        <div class="text-white font-medium">
+                            <span class="text-indigo-400 font-semibold">${mus.name}</span> fue vinculado a <span class="text-emerald-400 font-semibold">${band.name}</span>
+                        </div>
+                        <div class="text-[11px] text-gray-400 mt-0.5">Rol: ${r.role} (${r.startYear} - ${r.endYear || 'Presente'})</div>
+                    </div>
+                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+                        <button onclick="respondInvite('${r.id}', 'validated')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors flex items-center gap-1">
+                            <i class="fa-solid fa-check"></i> Aceptar
+                        </button>
+                        <button onclick="respondInvite('${r.id}', 'rejected')" class="px-3 py-1.5 bg-rose-600/20 hover:bg-rose-600 text-rose-300 hover:text-white font-medium rounded-lg transition-colors border border-rose-500/30 flex items-center gap-1">
+                            <i class="fa-solid fa-xmark"></i> Rechazar
+                        </button>
+                    </div>
+                `;
+                list.appendChild(card);
+            });
+        }
+
+        // --- ACTIONS & HANDLERS ---
+        function handleCreateMusician(e) {
+            e.preventDefault();
+            const name = document.getElementById('musicianName').value.trim();
+            const instrument = document.getElementById('musicianInstrument').value.trim();
+            const location = document.getElementById('musicianLocation').value.trim();
+
+            const newMus = {
+                id: 'm_' + Date.now(),
+                name,
+                instrument,
+                location
+            };
+
+            appState.musicians.push(newMus);
+            saveStorage();
+            initApp();
+            e.target.reset();
+            showCustomModal("Músico Registrado", `Se ha creado el perfil de ${name} correctamente.`);
+        }
+
+        function handleCreateBand(e) {
+            e.preventDefault();
+            const name = document.getElementById('bandName').value.trim();
+            const genre = document.getElementById('bandGenre').value.trim();
+            const startYear = parseInt(document.getElementById('bandStart').value);
+            const endYearVal = document.getElementById('bandEnd').value.trim();
+            const endYear = endYearVal ? parseInt(endYearVal) : null;
+
+            const newBand = {
+                id: 'b_' + Date.now(),
+                name,
+                genre,
+                startYear,
+                endYear
+            };
+
+            appState.bands.push(newBand);
+            saveStorage();
+            initApp();
+            e.target.reset();
+            showCustomModal("Proyecto Creado", `Se ha registrado la banda ${name} correctamente.`);
+        }
+
+        function handleLinkRelation(e) {
+            e.preventDefault();
+            const musicianId = document.getElementById('linkMusicianId').value;
+            const bandId = document.getElementById('linkBandId').value;
+            const role = document.getElementById('linkRole').value.trim();
+            const startYear = parseInt(document.getElementById('linkStartYear').value);
+            const endYearVal = document.getElementById('linkEndYear').value.trim();
+            const endYear = endYearVal ? parseInt(endYearVal) : null;
+
+            // Check if relation already exists
+            const exists = appState.relations.find(r => r.musicianId === musicianId && r.bandId === bandId);
+            if (exists) {
+                showCustomModal("Aviso", "Ya existe una vinculación registrada entre este músico y esta banda.", true);
+                return;
+            }
+
+            const newRel = {
+                id: 'r_' + Date.now(),
+                musicianId,
+                bandId,
+                role,
+                startYear,
+                endYear,
+                status: 'pending' // Requires validation
+            };
+
+            appState.relations.push(newRel);
+            saveStorage();
+            initApp();
+            e.target.reset();
+            showCustomModal("Solicitud Creada", "Vínculo enviado a revisión/bandeja de invitaciones para su validación formal en el grafo.");
+        }
+
+        function respondInvite(relId, action) {
+            const rel = appState.relations.find(r => r.id === relId);
+            if (!rel) return;
+
+            if (action === 'validated') {
+                rel.status = 'validated';
+                showCustomModal("Validado", "La vinculación ha sido aceptada e incorporada al grafo genealógico.");
+            } else {
+                // Remove rejected relation
+                appState.relations = appState.relations.filter(r => r.id !== relId);
+                showCustomModal("Rechazado", "La solicitud fue rechazada y descartada.");
+            }
+
+            saveStorage();
+            initApp();
+            renderInvitesModal();
+        }
+
+        function deleteMusician(id) {
+            if (confirm("¿Estás seguro de eliminar este músico y sus conexiones?")) {
+                appState.musicians = appState.musicians.filter(m => m.id !== id);
+                appState.relations = appState.relations.filter(r => r.musicianId !== id);
+                saveStorage();
+                initApp();
+            }
+        }
+
+        function deleteBand(id) {
+            if (confirm("¿Estás seguro de eliminar esta banda y sus conexiones?")) {
+                appState.bands = appState.bands.filter(b => b.id !== id);
+                appState.relations = appState.relations.filter(r => r.bandId !== id);
+                saveStorage();
+                initApp();
+            }
+        }
+
+        // --- VIS-NETWORK GRAPH BUILDER ---
+        function buildGraph() {
+            const container = document.getElementById('networkCanvas');
+            
+            // Nodes list
+            const nodesArray = [];
+            // Edges list
+            const edgesArray = [];
+
+            // Add Bands (Blue / Emerald circles)
+            appState.bands.forEach(b => {
+                nodesArray.push({
+                    id: b.id,
+                    label: b.name,
+                    group: 'bands',
+                    title: `Banda: ${b.name}\nGénero: ${b.genre}\nPeríodo: ${b.startYear} - ${b.endYear || 'Act.'}`,
+                    shape: 'dot',
+                    size: 26,
+                    color: {
+                        background: '#10b981',
+                        border: '#059669',
+                        highlight: { background: '#34d399', border: '#059669' }
+                    },
+                    font: { color: '#e5e7eb', size: 14, face: 'Inter', vadjust: 4 }
+                });
+            });
+
+            // Add Musicians (Indigo circles)
+            appState.musicians.forEach(m => {
+                nodesArray.push({
+                    id: m.id,
+                    label: m.name,
+                    group: 'musicians',
+                    title: `Músico: ${m.name}\nInstrumento: ${m.instrument}\nUbicación: ${m.location}`,
+                    shape: 'dot',
+                    size: 20,
+                    color: {
+                        background: '#6366f1',
+                        border: '#4f46e5',
+                        highlight: { background: '#818cf8', border: '#4f46e5' }
+                    },
+                    font: { color: '#e5e7eb', size: 13, face: 'Inter', vadjust: 4 }
+                });
+            });
+
+            // Add Edges only for 'validated' relations
+            appState.relations.forEach(r => {
+                if (r.status === 'validated') {
+                    edgesArray.push({
+                        id: r.id,
+                        from: r.musicianId,
+                        to: r.bandId,
+                        label: `${r.role} (${r.startYear}-${r.endYear || 'Act.'})`,
+                        color: { color: '#374151', highlight: '#6366f1' },
+                        font: { color: '#9ca3af', size: 10, align: 'middle', background: '#0a0b0e' },
+                        arrows: 'to',
+                        smooth: { type: 'cubicBezier', roundness: 0.2 }
+                    });
+                }
+            });
+
+            const data = {
+                nodes: new vis.DataSet(nodesArray),
+                edges: new vis.DataSet(edgesArray)
+            };
+
+            const options = {
+                nodes: {
+                    borderWidth: 2,
+                    shadow: true
+                },
+                edges: {
+                    width: 2,
+                    shadow: true
+                },
+                physics: {
+                    barnesHut: {
+                        gravitationalConstant: -3000,
+                        centralGravity: 0.4,
+                        springLength: 120,
+                        springConstant: 0.04,
+                        damping: 0.09,
+                        avoidOverlap: 0.1
+                    }
+                },
+                interaction: {
+                    hover: true,
+                    dragNodes: true,
+                    zoomView: true
+                }
+            };
+
+            if (network) {
+                network.destroy();
+            }
+
+            network = new vis.Network(container, data, options);
+
+            // Node click event listener for details card
+            network.on("click", function (params) {
+                if (params.nodes.length > 0) {
+                    const nodeId = params.nodes[0];
+                    showNodeDetails(nodeId);
+                } else {
+                    closeDetails();
+                }
+            });
+        }
+
+        function showNodeDetails(id) {
+            const card = document.getElementById('nodeDetailsCard');
+            const typeLabel = document.getElementById('detailNodeType');
+            const titleEl = document.getElementById('detailTitle');
+            const bodyEl = document.getElementById('detailBody');
+
+            // Check if it's a band
+            const band = appState.bands.find(b => b.id === id);
+            if (band) {
+                typeLabel.innerText = "Proyecto / Banda";
+                typeLabel.className = "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
+                titleEl.innerText = band.name;
+
+                // Find members
+                const members = appState.relations
+                    .filter(r => r.bandId === id && r.status === 'validated')
+                    .map(r => {
+                        const m = appState.musicians.find(mus => mus.id === r.musicianId);
+                        return m ? `• ${m.name} (${r.role}, ${r.startYear}-${r.endYear || 'Act.'})` : '';
+                    }).join('<br>');
+
+                bodyEl.innerHTML = `
+                    <div><span class="text-gray-400">Género:</span> ${band.genre}</div>
+                    <div><span class="text-gray-400">Período:</span> ${band.startYear} - ${band.endYear || 'Presente'}</div>
+                    <div class="pt-2 border-t border-darkborder mt-2">
+                        <div class="text-gray-400 font-medium mb-1">Integrantes validados:</div>
+                        <div class="text-indigo-300 space-y-0.5">${members || 'Ninguno registrado aún'}</div>
+                    </div>
+                `;
+                card.classList.remove('hidden');
+                return;
+            }
+
+            // Check if it's a musician
+            const mus = appState.musicians.find(m => m.id === id);
+            if (mus) {
+                typeLabel.innerText = "Músico";
+                typeLabel.className = "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30";
+                titleEl.innerText = mus.name;
+
+                // Find bands
+                const bandsJoined = appState.relations
+                    .filter(r => r.musicianId === id && r.status === 'validated')
+                    .map(r => {
+                        const b = appState.bands.find(band => band.id === r.bandId);
+                        return b ? `• ${b.name} (${r.role} • ${r.startYear}-${r.endYear || 'Act.'})` : '';
+                    }).join('<br>');
+
+                bodyEl.innerHTML = `
+                    <div><span class="text-gray-400">Instrumento:</span> ${mus.instrument}</div>
+                    <div><span class="text-gray-400">Ubicación:</span> ${mus.location}</div>
+                    <div class="pt-2 border-t border-darkborder mt-2">
+                        <div class="text-gray-400 font-medium mb-1">Historial de Bandas:</div>
+                        <div class="text-emerald-300 space-y-0.5">${bandsJoined || 'Sin proyectos validados en el grafo'}</div>
+                    </div>
+                `;
+                card.classList.remove('hidden');
+            }
+        }
+
+        function closeDetails() {
+            document.getElementById('nodeDetailsCard').classList.add('hidden');
+        }
+
+        function fitGraph() {
+            if (network) {
+                network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } });
+            }
+        }
+
+        // Window load initialisation
+        window.onload = function() {
+            initApp();
+            // Handle window resizing for network canvas
+            window.addEventListener('resize', () => {
+                if (network) network.redraw();
+            });
+        };
+    </script>
+</body>
+</html>

@@ -162,10 +162,10 @@
                     </form>
                 </div>
 
-                <!-- Section: Link Musician to Band -->
+                <!-- Section: Link Musician to Band (Multi-periods supported) -->
                 <div class="bg-darker p-4 rounded-xl border border-darkborder">
                     <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-                        <i class="fa-solid fa-link text-amber-400"></i> Vincular Músico a Banda
+                        <i class="fa-solid fa-link text-amber-400"></i> Vincular Músico a Banda (Multi-períodos)
                     </h3>
                     <form onsubmit="handleLinkRelation(event)" class="space-y-3">
                         <div>
@@ -180,20 +180,28 @@
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
-                        <div class="grid grid-cols-3 gap-2">
-                            <div>
-                                <label class="block text-[11px] text-gray-400 mb-1">Rol</label>
-                                <input type="text" id="linkRole" required placeholder="Guitarra" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        <div>
+                            <label class="block text-[11px] text-gray-400 mb-1">Rol / Instrumento en este proyecto</label>
+                            <input type="text" id="linkRole" required placeholder="Ej: Guitarra líder / Coros" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                        </div>
+
+                        <!-- Multi-periods dynamic container -->
+                        <div class="space-y-2 pt-1 border-t border-darkborder">
+                            <div class="flex items-center justify-between">
+                                <label class="block text-[11px] font-semibold text-amber-400 uppercase tracking-wider">Períodos de Participación</label>
+                                <button type="button" onclick="addPeriodField()" class="text-[11px] text-indigo-400 hover:text-indigo-300 font-medium flex items-center gap-1">
+                                    <i class="fa-solid fa-plus-circle"></i> Añadir otro período
+                                </button>
                             </div>
-                            <div>
-                                <label class="block text-[11px] text-gray-400 mb-1">Desde</label>
-                                <input type="number" id="linkStartYear" required placeholder="1978" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
-                            </div>
-                            <div>
-                                <label class="block text-[11px] text-gray-400 mb-1">Hasta</label>
-                                <input type="number" id="linkEndYear" placeholder="Actual" class="w-full bg-darkcard border border-darkborder rounded-lg px-3 py-2 text-xs text-white focus:outline-none focus:border-amber-500">
+                            <div id="periodsContainer" class="space-y-2">
+                                <div class="flex items-center gap-2 period-row">
+                                    <input type="number" placeholder="Año Inicio (ej: 2015)" required class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-start">
+                                    <input type="number" placeholder="Año Fin (vacío = Actual)" class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-end">
+                                    <button type="button" onclick="removePeriodField(this)" class="text-gray-500 hover:text-rose-400 px-1.5 py-1 hidden" title="Quitar período"><i class="fa-solid fa-trash-can"></i></button>
+                                </div>
                             </div>
                         </div>
+
                         <p class="text-[10px] text-gray-400 italic">Nota: Al vincular, requerirá validación/aceptación por invitación para integrarse al grafo.</p>
                         <button type="submit" class="w-full py-2 bg-amber-600 hover:bg-amber-500 text-white rounded-lg text-xs font-semibold transition-colors shadow-lg shadow-amber-600/20">
                             Enviar Solicitud de Vínculo
@@ -286,7 +294,7 @@
 
     <!-- Application Core Script -->
     <script>
-        // --- INITIAL DEFAULT DATA ---
+        // --- INITIAL DEFAULT DATA WITH MULTI-PERIODS ---
         const defaultData = {
             musicians: [
                 { id: 'm1', name: 'Charly García', instrument: 'Teclados / Voz', location: 'Buenos Aires' },
@@ -301,24 +309,65 @@
                 { id: 'b3', name: 'Invisible', genre: 'Rock Progresivo', startYear: 1973, endYear: 1976 }
             ],
             relations: [
-                { id: 'r1', musicianId: 'm1', bandId: 'b1', role: 'Teclados y Voz', startYear: 1978, endYear: 1982, status: 'validated' },
-                { id: 'r2', musicianId: 'm2', bandId: 'b1', role: 'Guitarra y Voz', startYear: 1978, endYear: 1982, status: 'validated' },
-                { id: 'r3', musicianId: 'm3', bandId: 'b1', role: 'Bajo y Coros', startYear: 1978, endYear: 1982, status: 'validated' },
-                { id: 'r4', musicianId: 'm4', bandId: 'b1', role: 'Batería', startYear: 1978, endYear: 1982, status: 'validated' },
-                { id: 'r5', musicianId: 'm1', bandId: 'b3', role: 'Invitado / Colaborador', startYear: 1974, endYear: 1974, status: 'pending' },
-                { id: 'r6', musicianId: 'm5', bandId: 'b3', role: 'Guitarra y Voz Principal', startYear: 1973, endYear: 1976, status: 'validated' }
+                { 
+                    id: 'r1', 
+                    musicianId: 'm1', 
+                    bandId: 'b1', 
+                    role: 'Teclados y Voz', 
+                    periods: [{ start: 1978, end: 1982 }, { start: 1992, end: 1992 }, { start: 2000, end: 2000 }], 
+                    status: 'validated' 
+                },
+                { 
+                    id: 'r2', 
+                    musicianId: 'm2', 
+                    bandId: 'b1', 
+                    role: 'Guitarra y Voz', 
+                    periods: [{ start: 1978, end: 1982 }, { start: 1992, end: 1992 }], 
+                    status: 'validated' 
+                },
+                { 
+                    id: 'r3', 
+                    musicianId: 'm3', 
+                    bandId: 'b1', 
+                    role: 'Bajo y Coros', 
+                    periods: [{ start: 1978, end: 1982 }, { start: 1992, end: 1992 }, { start: 2000, end: 2000 }], 
+                    status: 'validated' 
+                },
+                { 
+                    id: 'r4', 
+                    musicianId: 'm4', 
+                    bandId: 'b1', 
+                    role: 'Batería', 
+                    periods: [{ start: 1978, end: 1982 }], 
+                    status: 'validated' 
+                },
+                { 
+                    id: 'r5', 
+                    musicianId: 'm1', 
+                    bandId: 'b3', 
+                    role: 'Invitado / Colaborador', 
+                    periods: [{ start: 1974, end: 1974 }], 
+                    status: 'pending' 
+                },
+                { 
+                    id: 'r6', 
+                    musicianId: 'm5', 
+                    bandId: 'b3', 
+                    role: 'Guitarra y Voz Principal', 
+                    periods: [{ start: 1973, end: 1976 }], 
+                    status: 'validated' 
+                }
             ]
         };
 
         let appState = {
-            currentUserId: 'm1', // Default active simulated user
+            currentUserId: 'm1',
             musicians: [],
             bands: [],
             relations: []
         };
 
         let network = null;
-        let dataContainer = null;
 
         // --- LOCAL STORAGE & INIT ---
         function loadStorage() {
@@ -326,6 +375,12 @@
             if (saved) {
                 try {
                     appState = JSON.parse(saved);
+                    // Backward compatibility: convert old startYear/endYear relations to periods array if needed
+                    appState.relations.forEach(r => {
+                        if (!r.periods && (r.startYear !== undefined)) {
+                            r.periods = [{ start: r.startYear, end: r.endYear || null }];
+                        }
+                    });
                 } catch (e) {
                     appState = JSON.parse(JSON.stringify(defaultData));
                 }
@@ -344,6 +399,37 @@
             saveStorage();
             initApp();
             showCustomModal("Restaurado", "Se han cargado los datos de ejemplo exitosamente.");
+        }
+
+        // --- DYNAMIC PERIODS HELPER IN FORM ---
+        function addPeriodField() {
+            const container = document.getElementById('periodsContainer');
+            const row = document.createElement('div');
+            row.className = "flex items-center gap-2 period-row";
+            row.innerHTML = `
+                <input type="number" placeholder="Año Inicio" required class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-start">
+                <input type="number" placeholder="Año Fin (vacío = Act.)" class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-end">
+                <button type="button" onclick="removePeriodField(this)" class="text-gray-500 hover:text-rose-400 px-1.5 py-1" title="Quitar período"><i class="fa-solid fa-trash-can"></i></button>
+            `;
+            container.appendChild(row);
+            updateRemoveButtons();
+        }
+
+        function removePeriodField(btn) {
+            btn.closest('.period-row').remove();
+            updateRemoveButtons();
+        }
+
+        function updateRemoveButtons() {
+            const rows = document.querySelectorAll('.period-row');
+            rows.forEach((row, idx) => {
+                const delBtn = row.querySelector('button');
+                if (rows.length > 1) {
+                    delBtn.classList.remove('hidden');
+                } else {
+                    delBtn.classList.add('hidden');
+                }
+            });
         }
 
         // --- UI HELPERS ---
@@ -475,7 +561,6 @@
         }
 
         function updateInvitesBadge() {
-            // Pending invites targeted at current user OR any pending that user can validate
             const pendingCount = appState.relations.filter(r => r.status === 'pending').length;
             const badge = document.getElementById('invitesBadge');
             if (pendingCount > 0) {
@@ -506,14 +591,16 @@
                 const band = appState.bands.find(b => b.id === r.bandId);
                 if (!mus || !band) return;
 
+                const periodsStr = r.periods.map(p => `${p.start}-${p.end || 'Act.'}`).join(', ');
+
                 const card = document.createElement('div');
                 card.className = "bg-darker p-3.5 rounded-xl border border-darkborder flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs";
                 card.innerHTML = `
                     <div>
                         <div class="text-white font-medium">
-                            <span class="text-indigo-400 font-semibold">${mus.name}</span> fue vinculado a <span class="text-emerald-400 font-semibold">${band.name}</span>
+                            <span class="text-indigo-400 font-semibold">${mus.name}</span> vinculado a <span class="text-emerald-400 font-semibold">${band.name}</span>
                         </div>
-                        <div class="text-[11px] text-gray-400 mt-0.5">Rol: ${r.role} (${r.startYear} - ${r.endYear || 'Presente'})</div>
+                        <div class="text-[11px] text-gray-400 mt-0.5">Rol: ${r.role} | Períodos: ${periodsStr}</div>
                     </div>
                     <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
                         <button onclick="respondInvite('${r.id}', 'validated')" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white font-medium rounded-lg transition-colors flex items-center gap-1">
@@ -528,12 +615,21 @@
             });
         }
 
-        // --- ACTIONS & HANDLERS ---
+        // --- ACTIONS & HANDLERS WITH STRICT DUPLICATE VALIDATION ---
         function handleCreateMusician(e) {
             e.preventDefault();
             const name = document.getElementById('musicianName').value.trim();
             const instrument = document.getElementById('musicianInstrument').value.trim();
             const location = document.getElementById('musicianLocation').value.trim();
+
+            const normalizedName = name.toLowerCase();
+
+            // Duplicate validation for musician
+            const exists = appState.musicians.some(m => m.name.toLowerCase() === normalizedName);
+            if (exists) {
+                showCustomModal("Músico Duplicado", `Ya existe un músico registrado con el nombre o alias "${name}".`, true);
+                return;
+            }
 
             const newMus = {
                 id: 'm_' + Date.now(),
@@ -557,6 +653,15 @@
             const endYearVal = document.getElementById('bandEnd').value.trim();
             const endYear = endYearVal ? parseInt(endYearVal) : null;
 
+            const normalizedName = name.toLowerCase();
+
+            // Duplicate validation for band
+            const exists = appState.bands.some(b => b.name.toLowerCase() === normalizedName);
+            if (exists) {
+                showCustomModal("Banda Duplicada", `Ya existe una banda o proyecto registrado con el nombre "${name}".`, true);
+                return;
+            }
+
             const newBand = {
                 id: 'b_' + Date.now(),
                 name,
@@ -577,14 +682,55 @@
             const musicianId = document.getElementById('linkMusicianId').value;
             const bandId = document.getElementById('linkBandId').value;
             const role = document.getElementById('linkRole').value.trim();
-            const startYear = parseInt(document.getElementById('linkStartYear').value);
-            const endYearVal = document.getElementById('linkEndYear').value.trim();
-            const endYear = endYearVal ? parseInt(endYearVal) : null;
 
-            // Check if relation already exists
-            const exists = appState.relations.find(r => r.musicianId === musicianId && r.bandId === bandId);
-            if (exists) {
-                showCustomModal("Aviso", "Ya existe una vinculación registrada entre este músico y esta banda.", true);
+            // Gather all periods from dynamic inputs
+            const periodRows = document.querySelectorAll('.period-row');
+            const periods = [];
+            let isValid = true;
+
+            periodRows.forEach(row => {
+                const startInput = row.querySelector('.period-start').value;
+                const endInput = row.querySelector('.period-end').value;
+                if (!startInput) {
+                    isValid = false;
+                    return;
+                }
+                periods.push({
+                    start: parseInt(startInput),
+                    end: endInput ? parseInt(endInput) : null
+                });
+            });
+
+            if (!isValid || periods.length === 0) {
+                showCustomModal("Datos incompletos", "Por favor completa el año de inicio para cada período de participación.", true);
+                return;
+            }
+
+            // Check if relation already exists between this musician and band
+            const existingRel = appState.relations.find(r => r.musicianId === musicianId && r.bandId === bandId);
+            if (existingRel) {
+                // If it already exists, merge new periods into existing relation or notify
+                existingRel.role = role; // update role if changed
+                periods.forEach(p => {
+                    // avoid exact duplicate period ranges
+                    const alreadyHas = existingRel.periods.some(ep => ep.start === p.start && ep.end === p.end);
+                    if (!alreadyHas) {
+                        existingRel.periods.push(p);
+                    }
+                });
+                existingRel.status = 'pending'; // require re-validation upon update
+                saveStorage();
+                initApp();
+                e.target.reset();
+                // reset periods container to 1 row
+                document.getElementById('periodsContainer').innerHTML = `
+                    <div class="flex items-center gap-2 period-row">
+                        <input type="number" placeholder="Año Inicio (ej: 2015)" required class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-start">
+                        <input type="number" placeholder="Año Fin (vacío = Actual)" class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-end">
+                        <button type="button" onclick="removePeriodField(this)" class="text-gray-500 hover:text-rose-400 px-1.5 py-1 hidden" title="Quitar período"><i class="fa-solid fa-trash-can"></i></button>
+                    </div>
+                `;
+                showCustomModal("Vínculo Actualizado", "Se han añadido nuevos períodos de participación al registro existente. Queda pendiente de validación.");
                 return;
             }
 
@@ -593,8 +739,7 @@
                 musicianId,
                 bandId,
                 role,
-                startYear,
-                endYear,
+                periods,
                 status: 'pending' // Requires validation
             };
 
@@ -602,7 +747,14 @@
             saveStorage();
             initApp();
             e.target.reset();
-            showCustomModal("Solicitud Creada", "Vínculo enviado a revisión/bandeja de invitaciones para su validación formal en el grafo.");
+            document.getElementById('periodsContainer').innerHTML = `
+                <div class="flex items-center gap-2 period-row">
+                    <input type="number" placeholder="Año Inicio (ej: 2015)" required class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-start">
+                    <input type="number" placeholder="Año Fin (vacío = Actual)" class="flex-1 bg-darkcard border border-darkborder rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-amber-500 period-end">
+                    <button type="button" onclick="removePeriodField(this)" class="text-gray-500 hover:text-rose-400 px-1.5 py-1 hidden" title="Quitar período"><i class="fa-solid fa-trash-can"></i></button>
+                </div>
+            `;
+            showCustomModal("Solicitud Creada", "Vínculo con multi-períodos enviado a revisión para su validación formal en el grafo.");
         }
 
         function respondInvite(relId, action) {
@@ -613,7 +765,6 @@
                 rel.status = 'validated';
                 showCustomModal("Validado", "La vinculación ha sido aceptada e incorporada al grafo genealógico.");
             } else {
-                // Remove rejected relation
                 appState.relations = appState.relations.filter(r => r.id !== relId);
                 showCustomModal("Rechazado", "La solicitud fue rechazada y descartada.");
             }
@@ -641,16 +792,13 @@
             }
         }
 
-        // --- VIS-NETWORK GRAPH BUILDER ---
+        // --- VIS-NETWORK GRAPH BUILDER WITH MULTI-PERIOD EDGES ---
         function buildGraph() {
             const container = document.getElementById('networkCanvas');
             
-            // Nodes list
             const nodesArray = [];
-            // Edges list
             const edgesArray = [];
 
-            // Add Bands (Blue / Emerald circles)
             appState.bands.forEach(b => {
                 nodesArray.push({
                     id: b.id,
@@ -668,7 +816,6 @@
                 });
             });
 
-            // Add Musicians (Indigo circles)
             appState.musicians.forEach(m => {
                 nodesArray.push({
                     id: m.id,
@@ -686,14 +833,15 @@
                 });
             });
 
-            // Add Edges only for 'validated' relations
             appState.relations.forEach(r => {
                 if (r.status === 'validated') {
+                    // Format all periods for edge label
+                    const periodsText = r.periods.map(p => `${p.start}-${p.end || 'Act.'}`).join(' | ');
                     edgesArray.push({
                         id: r.id,
                         from: r.musicianId,
                         to: r.bandId,
-                        label: `${r.role} (${r.startYear}-${r.endYear || 'Act.'})`,
+                        label: `${r.role}\n[${periodsText}]`,
                         color: { color: '#374151', highlight: '#6366f1' },
                         font: { color: '#9ca3af', size: 10, align: 'middle', background: '#0a0b0e' },
                         arrows: 'to',
@@ -720,7 +868,7 @@
                     barnesHut: {
                         gravitationalConstant: -3000,
                         centralGravity: 0.4,
-                        springLength: 120,
+                        springLength: 130,
                         springConstant: 0.04,
                         damping: 0.09,
                         avoidOverlap: 0.1
@@ -739,7 +887,6 @@
 
             network = new vis.Network(container, data, options);
 
-            // Node click event listener for details card
             network.on("click", function (params) {
                 if (params.nodes.length > 0) {
                     const nodeId = params.nodes[0];
@@ -756,54 +903,54 @@
             const titleEl = document.getElementById('detailTitle');
             const bodyEl = document.getElementById('detailBody');
 
-            // Check if it's a band
             const band = appState.bands.find(b => b.id === id);
             if (band) {
                 typeLabel.innerText = "Proyecto / Banda";
                 typeLabel.className = "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30";
                 titleEl.innerText = band.name;
 
-                // Find members
                 const members = appState.relations
                     .filter(r => r.bandId === id && r.status === 'validated')
                     .map(r => {
                         const m = appState.musicians.find(mus => mus.id === r.musicianId);
-                        return m ? `• ${m.name} (${r.role}, ${r.startYear}-${r.endYear || 'Act.'})` : '';
+                        if (!m) return '';
+                        const pList = r.periods.map(p => `${p.start}-${p.end || 'Act.'}`).join(', ');
+                        return `• <strong class="text-white">${m.name}</strong> (${r.role})<br>&nbsp;&nbsp;<span class="text-gray-400">Etapas: ${pList}</span>`;
                     }).join('<br>');
 
                 bodyEl.innerHTML = `
                     <div><span class="text-gray-400">Género:</span> ${band.genre}</div>
-                    <div><span class="text-gray-400">Período:</span> ${band.startYear} - ${band.endYear || 'Presente'}</div>
+                    <div><span class="text-gray-400">Período de existencia:</span> ${band.startYear} - ${band.endYear || 'Presente'}</div>
                     <div class="pt-2 border-t border-darkborder mt-2">
-                        <div class="text-gray-400 font-medium mb-1">Integrantes validados:</div>
-                        <div class="text-indigo-300 space-y-0.5">${members || 'Ninguno registrado aún'}</div>
+                        <div class="text-gray-400 font-medium mb-1">Integrantes e historial de períodos:</div>
+                        <div class="text-indigo-300 space-y-1">${members || 'Ninguno registrado aún'}</div>
                     </div>
                 `;
                 card.classList.remove('hidden');
                 return;
             }
 
-            // Check if it's a musician
             const mus = appState.musicians.find(m => m.id === id);
             if (mus) {
                 typeLabel.innerText = "Músico";
                 typeLabel.className = "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 border border-indigo-500/30";
                 titleEl.innerText = mus.name;
 
-                // Find bands
                 const bandsJoined = appState.relations
                     .filter(r => r.musicianId === id && r.status === 'validated')
                     .map(r => {
                         const b = appState.bands.find(band => band.id === r.bandId);
-                        return b ? `• ${b.name} (${r.role} • ${r.startYear}-${r.endYear || 'Act.'})` : '';
+                        if (!b) return '';
+                        const pList = r.periods.map(p => `${p.start}-${p.end || 'Act.'}`).join(', ');
+                        return `• <strong class="text-white">${b.name}</strong> (${r.role})<br>&nbsp;&nbsp;<span class="text-gray-400">Períodos: ${pList}</span>`;
                     }).join('<br>');
 
                 bodyEl.innerHTML = `
                     <div><span class="text-gray-400">Instrumento:</span> ${mus.instrument}</div>
                     <div><span class="text-gray-400">Ubicación:</span> ${mus.location}</div>
                     <div class="pt-2 border-t border-darkborder mt-2">
-                        <div class="text-gray-400 font-medium mb-1">Historial de Bandas:</div>
-                        <div class="text-emerald-300 space-y-0.5">${bandsJoined || 'Sin proyectos validados en el grafo'}</div>
+                        <div class="text-gray-400 font-medium mb-1">Cronología de Bandas:</div>
+                        <div class="text-emerald-300 space-y-1">${bandsJoined || 'Sin proyectos validados en el grafo'}</div>
                     </div>
                 `;
                 card.classList.remove('hidden');
@@ -820,10 +967,8 @@
             }
         }
 
-        // Window load initialisation
         window.onload = function() {
             initApp();
-            // Handle window resizing for network canvas
             window.addEventListener('resize', () => {
                 if (network) network.redraw();
             });
